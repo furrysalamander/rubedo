@@ -1,0 +1,9 @@
+{
+    // "python.jediEnabled": false, 
+    "python.autoComplete.extraPaths": [
+        "/usr/local/lib/python3.9/dist-packages/cv2/python-3.9"
+    ],
+    "python.analysis.extraPaths": [
+        "/usr/local/lib/python3.9/dist-packages/cv2/python-3.9"
+    ]
+}
