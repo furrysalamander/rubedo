@@ -7,3 +7,6 @@ RUN pip3 install opencv-python-headless
 # RUN pip3 install --upgrade pip setuptools wheel
 # RUN pip3 install opencv-python
 # RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+RUN apt-get update && apt-get install -y git
+RUN pip3 install aiohttp requests
+RUN apt-get update && apt-get install -y ffmpeg

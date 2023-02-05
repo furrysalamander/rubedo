@@ -153,3 +153,5 @@ cython_debug/
 
 frame_data/
 .idea/
+*.gif
+*.mp4
