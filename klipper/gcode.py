@@ -29,13 +29,14 @@ def move_relative(x: float = None, y: float = None, z: float = None, f: float = 
     """)
 
 
-# async def send_gcode(gcode: str):
-#     async with aiohttp.ClientSession() as session:
-#         json_data = {
-#             "script": gcode
-#         }
-#         async with session.post(HOST + GCODE_ENDPOINT, json=json_data) as resp:
-#             return await resp.json()
+async def send_gcode(gcode: str):
+    async with aiohttp.ClientSession() as session:
+        json_data = {
+            "script": gcode
+        }
+        async with session.post(HOST + GCODE_ENDPOINT, json=json_data) as resp:
+            return await resp.json()
+
 
 def send_gcode(gcode: str):
     json_data = {
