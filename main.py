@@ -4,13 +4,55 @@ from glob import glob
 from collections.abc import Iterable
 import matplotlib.pyplot as plt
 from pathlib import Path
+from matplotlib import cm
+
 
 OUTPUT_GRAPH = False
 OUTPUT_FRAMES = False
+OUTPUT_HEIGHT_MAPS = False
+
+
+X_OFFSET = 200
+Y_OFFSET = 20
+FRAME_SIZE_X = 200
+FRAME_SIZE_Y = 60
+
+
+def generate_height_data_for_frame(frame: np.ndarray):
+    frame = crop_frame(frame)
+    frame = preprocess_frame(frame)
+    frame = apply_gaussian_blur(frame)
+
+    frame_height_data = np.ndarray(frame.shape[0])
+
+    for index, line in enumerate(frame):
+        # if line.max() > 0:
+        laser_x_val = compute_x_value(line)
+        frame_height_data[index] = laser_x_val
+    return frame_height_data
+
+
+def generate_height_data_from_video(video_file: str):
+    video = cv2.VideoCapture(video_file)
+    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    height_data: np.ndarray = np.ndarray((frame_count, FRAME_SIZE_Y))
+
+    frame_index = 0
+    while video.isOpened():
+        ret, frame = video.read()
+        if not ret:
+            break
+        
+        height_data[frame_index] = generate_height_data_for_frame(frame)
+        
+        frame_index += 1
+
+    return height_data
+
 
 def brightest_average(pixel_values: np.ndarray):
     brightest_pixels = np.argsort(pixel_values)[-3:]
-    line_brightest_x = np.average(brightest_pixels)
+    line_brightest_x = FRAME_SIZE_X - np.average(brightest_pixels)
     return line_brightest_x
 
 
@@ -18,11 +60,14 @@ def weighted_average(pixel_values: np.ndarray):
     normalized_values = pixel_values / 255
     adjusted_values = normalized_values ** 200
     x_values = np.arange(adjusted_values.size)
-    return np.average(x_values, weights=adjusted_values)
+    return FRAME_SIZE_X - np.average(x_values, weights=adjusted_values)
 
 
 def first_non_zero(pixel_values: np.ndarray):
-    return np.nonzero(pixel_values)[0][0]
+    try:
+        return np.nonzero(pixel_values)[0][0]
+    except:
+        print()
 
 
 def count_non_zero(pixel_values: np.ndarray):
@@ -39,7 +84,7 @@ def compute_x_value(pixel_values: np.ndarray):
     # return algorithms["brightest_avg"](pixel_values)
     # return algorithms["count_non_zero"](pixel_values)
     # return algorithms["first_non_zero"](pixel_values)
-    return algorithms["count_non_zero"](pixel_values)
+    return algorithms["weighted_avg"](pixel_values)
 
 
 fig = plt.figure()
@@ -65,9 +110,11 @@ def graph_frame(pixel_values: np.ndarray, output_file: str):
 
 
 def crop_frame(frame):
-    mid_y = 720//2 + 15
-    mid_x = 1280//2 + 30
-    frame = frame[mid_y-50:mid_y+50, mid_x+100:mid_x+300]
+    mid_y = 720//2 + Y_OFFSET
+    mid_x = 1280//2 + X_OFFSET
+    half_y = FRAME_SIZE_Y / 2
+    half_x = FRAME_SIZE_X / 2
+    frame = frame[int(mid_y-half_y):int(mid_y+half_y), int(mid_x-half_x):int(mid_x+half_x)]
     return frame
 
 
@@ -94,100 +141,102 @@ def compute_score_for_frame(x_values: Iterable):
     return np.std(x_values)
 
 
-def compute_height_map(video_file):
-    video_data = cv2.VideoCapture(video_file)
-    frames = []
-    while video_data.isOpened():
-        ret, frame = video_data.read()
-        if not ret:
-            break
+# def compute_height_map(video_file):
+#     video_data = cv2.VideoCapture(video_file)
+#     frames = []
 
-        frame = crop_frame(frame)
-        frame = preprocess_frame(frame)
-        # frame = apply_gaussian_blur(frame)
+#     while video_data.isOpened():
+#         ret, frame = video_data.read()
+#         if not ret:
+#             break
 
-        laser_x_values = []
+#         frame = crop_frame(frame)
+#         frame = preprocess_frame(frame)
+#         frame = apply_gaussian_blur(frame)
 
-        for line in frame:
-            if line.max() > 0:
-                laser_x_val = compute_x_value(line)
-                laser_x_values.append(laser_x_val)
-        frames.append(laser_x_values)
-    return frames
+#         laser_x_values = []
+
+#         for line in frame:
+#             if line.max() > 0:
+#                 laser_x_val = compute_x_value(line)
+#                 laser_x_values.append(laser_x_val)
+#         frames.append(laser_x_values)
+#     return frames
 
 
-def graph_height_map(frames):
+def graph_height_map(z_data: np.ndarray, output_file: str):
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    # fig, ax = plt.subplots()
 
-    points = []
-    for y, line_data in enumerate(frames):
-        for x, z in enumerate(line_data):
-            points.append(
-                (x, y, z)
-            )
-    x, y, z = zip(*points)
-    x, y, z = np.array(x), np.array(y), np.array(z)
-    ax.scatter(x, y, z)
-    fig.savefig("surface_map.png")
+    # points = []
+    # for y, line_data in enumerate(frames):
+    #     for x, z in enumerate(line_data):
+    #         points.append(
+    #             (x, y, z)
+    #         )
+    # x, y, z = zip(*points)
+    # x, y, z = np.array(x), np.array(y), np.array(z)
+    y = np.arange(len(z_data))
+    x = np.arange(len(z_data[0]))
+    (x ,y) = np.meshgrid(x,y)
+
+    ax.plot_surface(x, y, z_data,cmap=cm.coolwarm,linewidth=0, antialiased=False)
+    # ax.pcolormesh(x, y, z_data, cmap='RdBu')
+    # ax.scatter(x, y, z)
+    fig.savefig(output_file)
+
+
+def compute_score_from_heightmap(height_map: np.ndarray):
+    sum_of_scores = 0
+
+    for line in height_map.transpose():
+        sum_of_scores += compute_score_for_frame(line)
+    return sum_of_scores
 
 
 def main():
     ranking = []
+
+    # if OUTPUT_GRAPH:
+    #     graph_frame(laser_x_values, f"graphs/{Path(video_file).stem}-{frame_index}.png")
+
+    # if OUTPUT_FRAMES:
+    #     cv2.imwrite(f"frame_data/{Path(video_file).stem}-{frame_index}.png", frame)
+
+    # frame_score = compute_score_for_frame(laser_x_values)
+    # print(frame_index, frame_std)
 
     # i = 0
     for video_file in sorted(glob("sample_data2/*")):
         # if i < 6:
         #     i += 1
         #     continue
+        video_height_data = generate_height_data_from_video(video_file)
 
+        if OUTPUT_HEIGHT_MAPS:
+            graph_height_map(video_height_data, f"height_maps/{Path(video_file).stem}.png")
+
+        score = compute_score_from_heightmap(video_height_data)
         # height_data = compute_height_map(video_file)
         # graph_height_map(height_data)
 
         # return
 
         fig.suptitle(video_file)
-        video_data = cv2.VideoCapture(video_file)
 
         # out = cv2.VideoWriter("out.avi", cv2.VideoWriter_fourcc('M','J','P','G'), 30, (400,400))
 
         frame_index = 0
 
-        video_std = []
-        while video_data.isOpened():
-            ret, frame = video_data.read()
-            if not ret:
-                break
-
-            frame = crop_frame(frame)
-            frame = preprocess_frame(frame)
-            # frame = apply_gaussian_blur(frame)
-
-            laser_x_values = []
-
-            for line in frame:
-                if line.max() > 0:
-                    laser_x_val = compute_x_value(line)
-                    laser_x_values.append(laser_x_val)
-            
-            if OUTPUT_GRAPH:
-                graph_frame(laser_x_values, f"graphs/{Path(video_file).stem}-{frame_index}.png")
-
-            # gray = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-            # out.write(gray)
-            if OUTPUT_FRAMES:
-                cv2.imwrite(f"frame_data/{Path(video_file).stem}-{frame_index}.png", frame)
-
-            frame_score = compute_score_for_frame(laser_x_values)
-            # print(frame_index, frame_std)
-            video_std.append(frame_score)
-            frame_index += 1
+        # video_std = []
             # red_line = cv2.cvtColor(red_line, cv2.COLOR_GRAY2BGR)
             # out.write(red_line)
         # exit()
         # out.release()
-        print(np.std(video_std))
+        # print(np.std(video_std))
+        print(video_file, score)
 
-        ranking.append((video_file, np.std(video_std)))
+        ranking.append((video_file, score))
         # return
 
     print('\nSCORES\n')
