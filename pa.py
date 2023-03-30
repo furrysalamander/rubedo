@@ -1,17 +1,10 @@
-import numpy as np
+from pattern_info import PatternInfo
 import klipper.gcode as g
-
-# TODO: Populate all of these and place them in an appropriate file
-CAMERA_OFFSET_X = 0
-CAMERA_OFFSET_Y = 0
-
-CAMERA_FOV_X = 0
-CAMERA_FOV_Y = 0
 
 BUILD_PLATE_TEMPERATURE = 110
 HOTEND_TEMPERATURE = 255
 
-def generate_pa_tune_gcode(start_value, stop_value, start_x, start_y, num_lines, line_length, spacing):
+def generate_pa_tune_gcode(info: PatternInfo):
     Z_HOP_HEIGHT = 0.75
     LAYER_HEIGHT = 0.25
     RETRACTION_DISTANCE = 0.5
@@ -25,27 +18,31 @@ def generate_pa_tune_gcode(start_value, stop_value, start_x, start_y, num_lines,
         G92 E0 ;
         M106 S0 ; set fan speed to 0
 
-        G1 X{start_x} Y{start_y} F30000 ; move to start position
+        G1 X{info.start_x + info.line_length} Y{info.start_y} F30000 ; move to start position
         G1 Z{LAYER_HEIGHT} F300 ; move to layer height
         G91 ; switch to relative movements
         ; Print a bounding box to aid with removal and prime the extruder.
-        G1 Y{(num_lines + 1) * spacing} E{((num_lines + 1) * spacing) * EXTRUSION_DISTANCE_PER_MM} F3000;
-        G1 X{line_length} E{line_length * EXTRUSION_DISTANCE_PER_MM};
-        G1 Y{-(num_lines + 1) * spacing} E{((num_lines + 1) * spacing) * EXTRUSION_DISTANCE_PER_MM};
-        G1 Z{Z_HOP_HEIGHT} Y{-spacing} E{-RETRACTION_DISTANCE} F300; retract and prepare to hop to first line location.
+        G1 Y{info.num_lines * info.spacing} E{info.num_lines * info.spacing * EXTRUSION_DISTANCE_PER_MM} F3000;
+        G1 X{-info.line_length} E{info.line_length * EXTRUSION_DISTANCE_PER_MM};
+        G1 Y{-info.num_lines * info.spacing} E{info.num_lines * info.spacing * EXTRUSION_DISTANCE_PER_MM};
+        G1 X{info.line_length} E{info.line_length * EXTRUSION_DISTANCE_PER_MM};
+        G1 Z{Z_HOP_HEIGHT} Y{-info.spacing} E{-RETRACTION_DISTANCE} F300; retract and prepare to hop to first line location.
     """
 
-    for pa_value in np.linspace(start_value, stop_value, num_lines):
+    for pa_value in info.pa_values:
         # TODO: parameterize the extrusion values based on the layer height
+        #
+        # TODO: the lines could be printed in alternating directions to 
+        #   eliminate the need for retractions and also decrease print time.
         gcode += f"""
             SET_PRESSURE_ADVANCE ADVANCE={pa_value} ; set Pressure Advance
             M117 Testing Pressure Advance at: {pa_value}
-            G1 X-{line_length} Y{spacing} F30000        ; move to start position
+            G1 X-{info.line_length} Y{info.spacing} F30000        ; move to start position
             G1 Z{-Z_HOP_HEIGHT} F300           ; move to layer height
             G1 E{RETRACTION_DISTANCE} F1800           ; un-retract
-            G1 X{line_length / 4} E{(line_length / 4) * EXTRUSION_DISTANCE_PER_MM} F300     ; print line part one
-            G1 X{line_length / 2} E{(line_length / 2) * EXTRUSION_DISTANCE_PER_MM} F9000    ; print line part two
-            G1 X{line_length / 4} E{(line_length / 4) * EXTRUSION_DISTANCE_PER_MM} F300     ; print line part three
+            G1 X{info.line_length / 4} E{(info.line_length / 4) * EXTRUSION_DISTANCE_PER_MM} F300     ; print line part one
+            G1 X{info.line_length / 2} E{(info.line_length / 2) * EXTRUSION_DISTANCE_PER_MM} F9000    ; print line part two
+            G1 X{info.line_length / 4} E{(info.line_length / 4) * EXTRUSION_DISTANCE_PER_MM} F300     ; print line part three
             G1 E{-RETRACTION_DISTANCE} F1800          ; retract
             G1 Z{Z_HOP_HEIGHT} F300            ; Move above layer height 
         """
@@ -55,6 +52,9 @@ def generate_pa_tune_gcode(start_value, stop_value, start_x, start_y, num_lines,
     return gcode
 
 if __name__=="__main__":
+    # FIXME: this stuff times out when it takes too long for the printer to respond... not sure
+    # how to properly send commands and block until they're finished.  Can I poll for the printer
+    # status?
     g.do_initialization_routine()
     g.send_gcode(f"""
     M104 S180; preheat nozzle while waiting for build plate to get to temp
@@ -66,8 +66,8 @@ if __name__=="__main__":
         generate_pa_tune_gcode(
             0, 0.1,
             30, 30,
-            20,
-            40, 4
+            10,
+            30, 4
         )
     )
 

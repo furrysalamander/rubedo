@@ -56,11 +56,11 @@ def has_homed():
     return result["status"]["toolhead"]["homed_axes"] == "xyz"
 
 def do_initialization_routine():
-    # if not has_homed():
-        # print("Homing")
-        # home()
-        # print("Quad Gantry Level")
-        # send_gcode("QUAD_GANTRY_LEVEL")
+    if not has_homed():
+        print("Homing")
+        home()
+        print("Quad Gantry Level")
+        send_gcode("QUAD_GANTRY_LEVEL")
         print("Rehoming Z")
         send_gcode("G28 Z")
 
