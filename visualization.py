@@ -1,10 +1,18 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import cm
+from pa_result import PaResult
 from pathlib import Path
 
 from constants import *
+
+
+## FIXME:
+#
+# This WHOLE file is currently a broken mess.  Needs to be cleaned up and fixed.
+# 
+#
+#
 
 def graph_frame(pixel_values: np.ndarray, output_file: str):
     # fig.
@@ -43,17 +51,12 @@ def graph_height_map(z_data: np.ndarray, output_file: str):
     fig.savefig(output_file)
 
 
-def generate_graph_from_heightmap():
-    if OUTPUT_GRAPH:
-        graph_frame(laser_x_values, f"graphs/{Path(video_file).stem}-{frame_index}.png")
-    pass
-
-def generate_frames_from_heightmap():
-    if OUTPUT_FRAMES:
-        cv2.imwrite(f"frame_data/{Path(video_file).stem}-{frame_index}.png", frame)
-    pass
+def generate_graphs_for_pa_results(pa_data: PaResult):
+    graph_frame(laser_x_values, f"graphs/{Path(video_file).stem}-{frame_index}.png")
 
 
+def generate_frames_from_heightmap(pa_data: PaResult):
+    cv2.imwrite(f"frame_data/{Path(video_file).stem}-{frame_index}.png", frame)
 
 
 fig = plt.figure()

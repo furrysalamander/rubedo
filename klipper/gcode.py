@@ -1,9 +1,11 @@
 # import asyncio
 # import aiohttp
 import requests
+import websocket
 
 # HOST = 'fluiddpi.local'
-HOST = 'http://192.168.1.113'
+HOST = '192.168.1.113'
+WS_PORT = 7125
 GCODE_ENDPOINT = '/printer/gcode/script'
 OBJECTS_ENDPOINT = '/printer/objects/query'
 
@@ -29,21 +31,27 @@ def move_relative(x: float = None, y: float = None, z: float = None, f: float = 
     """)
 
 
-async def send_gcode(gcode: str):
-    async with aiohttp.ClientSession() as session:
-        json_data = {
-            "script": gcode
-        }
-        async with session.post(HOST + GCODE_ENDPOINT, json=json_data) as resp:
-            return await resp.json()
+# async def send_gcode(gcode: str):
+#     async with aiohttp.ClientSession() as session:
+#         json_data = {
+#             "script": gcode
+#         }
+#         async with session.post(HOST + GCODE_ENDPOINT, json=json_data) as resp:
+#             return await resp.json()
 
 
 def send_gcode(gcode: str):
     json_data = {
         "script": gcode
     }
-    resp = requests.post(HOST + GCODE_ENDPOINT, json=json_data)
-    return resp.json()
+    resp = requests.post("http://" + HOST + GCODE_ENDPOINT, json=json_data, timeout=600)
+    return resp
+# ws = websocket.WebSocket()
+# ws.connect(f"ws://{HOST}:{WS_PORT}/klippysocket")
+
+# def send_gcode():
+#     ws.send()
+#     pass
 
 
 def home():
@@ -51,7 +59,7 @@ def home():
 
 
 def has_homed():
-    resp = requests.get(HOST + OBJECTS_ENDPOINT, params="toolhead")
+    resp = requests.get("http://" + HOST + OBJECTS_ENDPOINT, params="toolhead")
     result = resp.json()["result"]
     return result["status"]["toolhead"]["homed_axes"] == "xyz"
 
@@ -63,6 +71,21 @@ def do_initialization_routine():
         send_gcode("QUAD_GANTRY_LEVEL")
         print("Rehoming Z")
         send_gcode("G28 Z")
+
+def query_printer_position():
+    resp = requests.get("http://" + HOST + OBJECTS_ENDPOINT, params="motion_report")
+    return resp.json()["result"]["status"]["motion_report"]["live_position"]
+
+def wait_until_printer_at_location(x = None, y = None, z = None):
+    while True:
+        position = query_printer_position()
+        if x is not None and abs(x - position[0]) > 0.01:
+            continue
+        if y is not None and abs(y - position[1]) > 0.01:
+            continue
+        if z is not None and abs(z - position[2]) > 0.01:
+            continue
+        break
 
 def main():
     do_initialization_routine()

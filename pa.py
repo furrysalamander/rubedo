@@ -1,10 +1,13 @@
+#!/usr/bin/python3
 from pattern_info import PatternInfo
-import klipper.gcode as g
 
 BUILD_PLATE_TEMPERATURE = 110
 HOTEND_TEMPERATURE = 255
 
-def generate_pa_tune_gcode(info: PatternInfo):
+FINISHED_X = 30
+FINISHED_Y = 250
+
+def generate_pa_tune_gcode(info: PatternInfo, finished_printing=True):
     Z_HOP_HEIGHT = 0.75
     LAYER_HEIGHT = 0.25
     RETRACTION_DISTANCE = 0.5
@@ -18,15 +21,16 @@ def generate_pa_tune_gcode(info: PatternInfo):
         G92 E0 ;
         M106 S0 ; set fan speed to 0
 
-        G1 X{info.start_x + info.line_length} Y{info.start_y} F30000 ; move to start position
+        G1 X{info.start_x + info.line_length} Y{info.start_y - info.spacing} F30000 ; move to start position
         G1 Z{LAYER_HEIGHT} F300 ; move to layer height
         G91 ; switch to relative movements
         ; Print a bounding box to aid with removal and prime the extruder.
-        G1 Y{info.num_lines * info.spacing} E{info.num_lines * info.spacing * EXTRUSION_DISTANCE_PER_MM} F3000;
+        G1 E{RETRACTION_DISTANCE * 2}
+        G1 Y{(len(info.pa_values) + 1) * info.spacing} E{(len(info.pa_values) + 1) * info.spacing * EXTRUSION_DISTANCE_PER_MM} F3000;
         G1 X{-info.line_length} E{info.line_length * EXTRUSION_DISTANCE_PER_MM};
-        G1 Y{-info.num_lines * info.spacing} E{info.num_lines * info.spacing * EXTRUSION_DISTANCE_PER_MM};
+        G1 Y{-(len(info.pa_values) + 1) * info.spacing} E{(len(info.pa_values) + 1) * info.spacing * EXTRUSION_DISTANCE_PER_MM};
         G1 X{info.line_length} E{info.line_length * EXTRUSION_DISTANCE_PER_MM};
-        G1 Z{Z_HOP_HEIGHT} Y{-info.spacing} E{-RETRACTION_DISTANCE} F300; retract and prepare to hop to first line location.
+        G1 Z{Z_HOP_HEIGHT} E{-RETRACTION_DISTANCE} F300; retract and prepare to hop to first line location.
     """
 
     for pa_value in info.pa_values:
@@ -47,30 +51,84 @@ def generate_pa_tune_gcode(info: PatternInfo):
             G1 Z{Z_HOP_HEIGHT} F300            ; Move above layer height 
         """
     gcode += """
-    M117 ; clear LCD message
+    G1 Z20; move up 20mm
+    M117
     """
+    if finished_printing:
+        gcode += f"""
+        G90; switch back to absolute coordinates
+        G1 X{FINISHED_X} Y{FINISHED_Y} F30000;
+        """
+    # print(gcode)
     return gcode
 
-if __name__=="__main__":
+
+def main():
     # FIXME: this stuff times out when it takes too long for the printer to respond... not sure
     # how to properly send commands and block until they're finished.  Can I poll for the printer
     # status?
-    g.do_initialization_routine()
-    g.send_gcode(f"""
+    gcode = f"""
+    G28
     M104 S180; preheat nozzle while waiting for build plate to get to temp
     M190 S{BUILD_PLATE_TEMPERATURE};
+    QUAD_GANTRY_LEVEL
+    CLEAN_NOZZLE
+    G28 Z
     M109 S{HOTEND_TEMPERATURE};
-    """)
-    g.send_gcode("CLEAN_NOZZLE")
-    g.send_gcode(
-        generate_pa_tune_gcode(
-            0, 0.1,
-            30, 30,
-            10,
-            30, 4
-        )
+    """
+    # PA Patterns
+    control = PatternInfo(
+        0, 0,
+        30, 30,
+        10,
+        30, 4
+    )
+    normal_pattern = PatternInfo(
+        0, 0.06,
+        65, 30,
+        10,
+        30, 4
+    )
+    calibrated = PatternInfo(
+        0.04, 0.04,
+        100, 30,
+        10,
+        30, 4
     )
 
+
+    gcode += generate_pa_tune_gcode(control)
+    gcode += generate_pa_tune_gcode(normal_pattern)
+    gcode += generate_pa_tune_gcode(calibrated)
+
+    # Reset PA so I don't forget.
+    gcode += """
+    SET_PRESSURE_ADVANCE ADVANCE=0.04
+    """
+
+    with open("pa_patterns.gcode", "w") as f:
+        f.write(gcode)
+    # g.do_initialization_routine()
+    # g.send_gcode(f"""
+    # M104 S180; preheat nozzle while waiting for build plate to get to temp
+    # M190 S{BUILD_PLATE_TEMPERATURE};
+    # M109 S{HOTEND_TEMPERATURE};
+    # """)
+    # g.send_gcode("CLEAN_NOZZLE")
+    # g.send_gcode(
+    #     generate_pa_tune_gcode(
+    #         0, 0.1,
+    #         30, 30,
+    #         10,
+    #         30, 4
+    #     )
+    # )
+
+    
+
+
+if __name__=="__main__":
+    main()
 
 # {% set BED = params.BED|default(99)|float %}
 # {% set EXTRUDER = params.EXTRUDER|default(239)|float %}

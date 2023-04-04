@@ -3,10 +3,10 @@ import cv2
 import numpy as np
 
 def crop_frame(frame):
-    mid_y = 720//2 + Y_OFFSET
-    mid_x = 1280//2 + X_OFFSET
-    half_y = FRAME_SIZE_Y / 2
-    half_x = FRAME_SIZE_X / 2
+    mid_y = 720//2 + CROP_Y_OFFSET
+    mid_x = 1280//2 + CROP_X_OFFSET
+    half_y = CROP_FRAME_SIZE_Y / 2
+    half_x = CROP_FRAME_SIZE_X / 2
     frame = frame[int(mid_y-half_y):int(mid_y+half_y), int(mid_x-half_x):int(mid_x+half_x)]
     return frame
 
@@ -28,4 +28,3 @@ def apply_gaussian_blur(frame):
     frame = cv2.GaussianBlur(frame, (11, 11), 0)
     frame = cv2.GaussianBlur(frame, (11, 11), 0)
     return frame
-

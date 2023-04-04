@@ -1,97 +1,118 @@
 #!/usr/bin/python3
-import cv2
-import numpy as np
-from glob import glob
-from pathlib import Path
-
 from processing import *
-from visualization import graph_height_map
-from analysis import compute_x_value
+from analysis import pa_score_from_video_file
+from pattern_info import PatternInfo
+from record import record_pattern
+from pa_result import PaResult
+from pa import *
+
+import klipper.gcode as g
+
+import tempfile
+from pprint import pprint
 
 
-def generate_height_data_for_frame(frame: np.ndarray):
-    frame = crop_frame(frame)
-    frame = preprocess_frame(frame)
-    frame = apply_gaussian_blur(frame)
-
-    frame_height_data = np.ndarray(frame.shape[0])
-
-    for index, line in enumerate(frame):
-        # if line.max() > 0:
-        laser_x_val = compute_x_value(line)
-        frame_height_data[index] = laser_x_val
-
-    return frame_height_data
+# This will print a calibrated + control pattern and measure the % improvement after tuning
+VALIDATE_RESULTS = True
 
 
-def generate_height_data_from_video(video_file: str):
-    video = cv2.VideoCapture(video_file)
-    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    height_data: np.ndarray = np.ndarray((frame_count, FRAME_SIZE_Y))
+PRINT_START = """
+G28
+M104 S180; preheat nozzle while waiting for build plate to get to temp
+M190 S{BUILD_PLATE_TEMPERATURE};
+QUAD_GANTRY_LEVEL
+CLEAN_NOZZLE
+G28 Z
+M109 S{HOTEND_TEMPERATURE};
+"""
 
-    frame_index = 0
-    while video.isOpened():
-        ret, frame = video.read()
-        if not ret:
-            break
-        
-        height_data[frame_index] = generate_height_data_for_frame(frame)
-        
-        frame_index += 1
+def generate_pa_results_for_pattern(pattern_info: PatternInfo)-> list[PaResult]:
+    results = []
 
-    return height_data
+    # Hardcoding a buffer distance of 3mm here for now.  Adjust if needed.
+    with tempfile.TemporaryDirectory("pa_videos") as dir:
+        video_files = record_pattern(pattern_info, 3, dir)
 
-
-def compute_score_from_heightmap(height_map: np.ndarray):
-    sum_of_scores = 0
-
-    for line in height_map.transpose():
-        sum_of_scores += np.std(line)
-    return sum_of_scores
+        for video_file in video_files:
+            results.append(
+                pa_score_from_video_file(video_file)
+            )
+    return results
 
 
 def main():
-    ranking = []
+    calibration_pattern = PatternInfo(
+        0, 0.06,
+        30, 30,
+        10,
+        30, 4
+    )
 
-    # frame_score = compute_score_for_frame(laser_x_values)
-    # print(frame_index, frame_std)
+    
+    # g.send_gcode(PRINT_START)
+    g.send_gcode("CLEAN_NOZZLE")
+    g.send_gcode(generate_pa_tune_gcode(calibration_pattern))
+    g.wait_until_printer_at_location(FINISHED_X, FINISHED_Y)
+    g.send_gcode("M104 S0; let the hotend cool")
 
-    # i = 0
-    for video_file in sorted(glob("sample_data2/*")):
-        # if i < 6:
-        #     i += 1
-        #     continue
-        video_height_data = generate_height_data_from_video(video_file)
+    results = generate_pa_results_for_pattern(calibration_pattern)
+        
+    sorted_results = list(sorted(zip(results, calibration_pattern.pa_values), key=lambda x: x[0].score))
+    sorted_results = list([(x.score, y) for x, y in sorted_results])
 
-        if OUTPUT_HEIGHT_MAPS:
-            graph_height_map(video_height_data, f"height_maps/{Path(video_file).stem}.png")
+    best_pa_value = sorted_results[0][1]
+    print()
+    pprint(sorted_results)
+    print()
+    print(f"Recommended PA Value: {best_pa_value}, with a score of {sorted_results[0][0]}")
+    print()
+    g.send_gcode(f"SET_PRESSURE_ADVANCE ADVANCE={best_pa_value}")
 
-        score = compute_score_from_heightmap(video_height_data)
-        # height_data = compute_height_map(video_file)
-        # graph_height_map(height_data)
+    if not VALIDATE_RESULTS:
+        return
 
-        # return
+    control = PatternInfo(
+        0, 0,
+        65, 30,
+        10,
+        30, 4
+    )
 
-        # fig.suptitle(video_file)
+    calibrated = PatternInfo(
+        best_pa_value, best_pa_value,
+        100, 30,
+        10,
+        30, 4
+    )
 
-        # out = cv2.VideoWriter("out.avi", cv2.VideoWriter_fourcc('M','J','P','G'), 30, (400,400))
 
-        frame_index = 0
+    gcode = f"""
+    M109 S{HOTEND_TEMPERATURE};
+    CLEAN_NOZZLE
+    """
+    gcode += generate_pa_tune_gcode(control, False)
+    gcode += generate_pa_tune_gcode(calibrated)
+    g.send_gcode(gcode)
+    g.send_gcode("M104 S0; let the hotend cool")
+    g.wait_until_printer_at_location(FINISHED_X, FINISHED_Y)
 
-        # video_std = []
-            # red_line = cv2.cvtColor(red_line, cv2.COLOR_GRAY2BGR)
-            # out.write(red_line)
-        # exit()
-        # out.release()
-        # print(np.std(video_std))
-        print(video_file, score)
+    control_results = generate_pa_results_for_pattern(control)
+    calibrated_results = generate_pa_results_for_pattern(calibrated)
 
-        ranking.append((video_file, score))
-        # return
+    control_scores = list([x.score for x in control_results])
+    calibrated_scores = list([x.score for x in calibrated_results])
 
-    print('\nSCORES\n')
+    control_average = np.average(control_scores)
+    calibrated_average = np.average(calibrated_scores)
 
-    [ print(x) for x in sorted(ranking, key=lambda x: x[1])]
+    print("Control")
+    pprint(control_scores)
+    print("Calibrated")
+    pprint(calibrated_scores)
+    print()
+    print(f"Average Control Score: {control_average}")
+    print(f"Average Calibrated Score: {calibrated_average}")
+    print()
 
 
 if __name__=="__main__":

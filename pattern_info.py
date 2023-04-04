@@ -12,4 +12,4 @@ class PatternInfo:
         self.spacing = spacing
 
     def lines_start_y(self):
-        return [(x * self.spacing) + self.start_y for x in range(1, len(self.pa_values) + 1)]
+        return [(x * self.spacing) + self.start_y for x in range(len(self.pa_values))]
