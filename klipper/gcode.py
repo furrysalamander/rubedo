@@ -1,7 +1,6 @@
-# import asyncio
-# import aiohttp
-import requests
+import json
 import websocket
+import random
 
 # HOST = 'fluiddpi.local'
 HOST = '192.168.1.113'
@@ -11,6 +10,8 @@ OBJECTS_ENDPOINT = '/printer/objects/query'
 
 # Helper function to automatically generate the coordinate strings
 # for G0 commands.
+
+
 def format_move(x: float = None, y: float = None, z: float = None, f: float = None):
     def format_string(value, prefix):
         return f" {prefix}{value}" if value is not None else ""
@@ -31,27 +32,36 @@ def move_relative(x: float = None, y: float = None, z: float = None, f: float = 
     """)
 
 
-# async def send_gcode(gcode: str):
-#     async with aiohttp.ClientSession() as session:
-#         json_data = {
-#             "script": gcode
-#         }
-#         async with session.post(HOST + GCODE_ENDPOINT, json=json_data) as resp:
-#             return await resp.json()
+def send_to_websocket(method: str, args: dict = None):
+    # This function is not thread safe.
+    request_id = random.randint(0, 10000000)
+    request = {
+        "jsonrpc": "2.0",
+        "method": method,
+        "id": request_id
+    }
+    if args is not None:
+        request["params"] = args
+
+    print(request)
+    ws.send(json.dumps(request))
+    while True:
+        resp = json.loads(ws.recv())
+        # try:
+        #     print(resp["method"])
+        # except Exception as e:
+        #     print(resp)
+        # print(resp.keys())
+        if "id" in resp and resp["id"] == request_id:
+            return resp
+
+
+ws = websocket.WebSocket()
+ws.connect(f"ws://{HOST}:{WS_PORT}/websocket")
 
 
 def send_gcode(gcode: str):
-    json_data = {
-        "script": gcode
-    }
-    resp = requests.post("http://" + HOST + GCODE_ENDPOINT, json=json_data, timeout=600)
-    return resp
-# ws = websocket.WebSocket()
-# ws.connect(f"ws://{HOST}:{WS_PORT}/klippysocket")
-
-# def send_gcode():
-#     ws.send()
-#     pass
+    return send_to_websocket("printer.gcode.script", {"script": gcode})
 
 
 def home():
@@ -59,9 +69,10 @@ def home():
 
 
 def has_homed():
-    resp = requests.get("http://" + HOST + OBJECTS_ENDPOINT, params="toolhead")
-    result = resp.json()["result"]
-    return result["status"]["toolhead"]["homed_axes"] == "xyz"
+    resp = send_to_websocket("printer.objects.query", {
+                             "objects": {"toolhead": None}})
+    return resp["result"]["status"]["toolhead"]["homed_axes"] == "xyz"
+
 
 def do_initialization_routine():
     if not has_homed():
@@ -72,11 +83,14 @@ def do_initialization_routine():
         print("Rehoming Z")
         send_gcode("G28 Z")
 
-def query_printer_position():
-    resp = requests.get("http://" + HOST + OBJECTS_ENDPOINT, params="motion_report")
-    return resp.json()["result"]["status"]["motion_report"]["live_position"]
 
-def wait_until_printer_at_location(x = None, y = None, z = None):
+def query_printer_position():
+    resp = send_to_websocket("printer.objects.query", {
+        "objects": {"motion_report": None}})
+    return resp["result"]["status"]["motion_report"]["live_position"]
+
+
+def wait_until_printer_at_location(x=None, y=None, z=None):
     while True:
         position = query_printer_position()
         if x is not None and abs(x - position[0]) > 0.01:
@@ -87,14 +101,18 @@ def wait_until_printer_at_location(x = None, y = None, z = None):
             continue
         break
 
+
 def main():
-    do_initialization_routine()
-    print("Finished initializing")
-    
-    # move_absolute(150, 150, 16, 1000000)
-    # move_absolute(10, 10, 20, 1000000)
-    # move_absolute(150, 150, 16, 1000000)
-    print("Done")
+    # send_to_websocket("server.info")
+    # print(home())
+    print(query_printer_position())
+    # do_initialization_routine()
+    # print("Finished initializing")
+
+    # # move_absolute(150, 150, 16, 1000000)
+    # # move_absolute(10, 10, 20, 1000000)
+    # # move_absolute(150, 150, 16, 1000000)
+    # print("Done")
 
 
 if __name__ == "__main__":
