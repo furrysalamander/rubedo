@@ -16,9 +16,10 @@ from pprint import pprint
 VALIDATE_RESULTS = True
 
 
-PRINT_START = """
-G28
+PRINT_START = f"""
 M104 S180; preheat nozzle while waiting for build plate to get to temp
+M140 S{BUILD_PLATE_TEMPERATURE};
+G28
 M190 S{BUILD_PLATE_TEMPERATURE};
 QUAD_GANTRY_LEVEL
 CLEAN_NOZZLE
