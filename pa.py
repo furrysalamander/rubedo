@@ -12,6 +12,20 @@ def generate_pa_tune_gcode(info: PatternInfo, finished_printing=True):
     LAYER_HEIGHT = 0.25
     RETRACTION_DISTANCE = 0.5
     EXTRUSION_DISTANCE_PER_MM = 0.045899
+    BOUNDING_BOX_LINE_WIDTH = 0.4 # May need adjustment. 
+
+    def gcode_relative_extrude_move(x=None, y=None):
+        # Does not support diagonal moves
+        if x is not None:
+            move_str = f"X{x}"
+            move_mag = abs(x)
+        else:
+            move_str = f"Y{y}"
+            move_mag = abs(y)
+        
+        return f"G1 {move_str} E{move_mag * EXTRUSION_DISTANCE_PER_MM} F2000;"
+
+    bounding_box_height = (len(info.pa_values) + 1) * info.spacing
 
     gcode = f"""
         G21 ; Millimeter units
@@ -21,15 +35,23 @@ def generate_pa_tune_gcode(info: PatternInfo, finished_printing=True):
         G92 E0 ;
         M106 S0 ; set fan speed to 0
 
-        G1 X{info.start_x + info.line_length} Y{info.start_y - info.spacing} F30000 ; move to start position
+        G1 X{info.start_x + info.line_length + BOUNDING_BOX_LINE_WIDTH} Y{info.start_y - info.spacing - BOUNDING_BOX_LINE_WIDTH} F30000 ; move to start position
         G1 Z{LAYER_HEIGHT} F300 ; move to layer height
         G91 ; switch to relative movements
+
         ; Print a bounding box to aid with removal and prime the extruder.
         G1 E{RETRACTION_DISTANCE * 2}
-        G1 Y{(len(info.pa_values) + 1) * info.spacing} E{(len(info.pa_values) + 1) * info.spacing * EXTRUSION_DISTANCE_PER_MM} F3000;
-        G1 X{-info.line_length} E{info.line_length * EXTRUSION_DISTANCE_PER_MM};
-        G1 Y{-(len(info.pa_values) + 1) * info.spacing} E{(len(info.pa_values) + 1) * info.spacing * EXTRUSION_DISTANCE_PER_MM};
-        G1 X{info.line_length} E{info.line_length * EXTRUSION_DISTANCE_PER_MM};
+        {gcode_relative_extrude_move(y=bounding_box_height + BOUNDING_BOX_LINE_WIDTH * 2)}
+        {gcode_relative_extrude_move(x=-(info.line_length + BOUNDING_BOX_LINE_WIDTH * 2))}
+        {gcode_relative_extrude_move(y=-(bounding_box_height + BOUNDING_BOX_LINE_WIDTH * 2))}
+        {gcode_relative_extrude_move(x=info.line_length + BOUNDING_BOX_LINE_WIDTH * 2)}
+        G1 X{-BOUNDING_BOX_LINE_WIDTH} Y{BOUNDING_BOX_LINE_WIDTH}
+        ; second bounding box loop
+        {gcode_relative_extrude_move(y=bounding_box_height)}
+        {gcode_relative_extrude_move(x=-info.line_length)}
+        {gcode_relative_extrude_move(y=-bounding_box_height)}
+        {gcode_relative_extrude_move(x=info.line_length)}
+
         G1 Z{Z_HOP_HEIGHT} E{-RETRACTION_DISTANCE} F300; retract and prepare to hop to first line location.
     """
 
