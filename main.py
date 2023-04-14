@@ -50,7 +50,7 @@ def main():
     )
 
     
-    # g.send_gcode(PRINT_START)
+    g.send_gcode(PRINT_START)
     g.send_gcode("CLEAN_NOZZLE")
     g.send_gcode(generate_pa_tune_gcode(calibration_pattern))
     g.wait_until_printer_at_location(FINISHED_X, FINISHED_Y)

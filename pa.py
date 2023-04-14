@@ -73,13 +73,13 @@ def generate_pa_tune_gcode(info: PatternInfo, finished_printing=True):
             G1 Z{Z_HOP_HEIGHT} F300            ; Move above layer height 
         """
     gcode += """
-    G1 Z20; move up 20mm
+    G1 Z5; move up 1mm
     M117
     """
     if finished_printing:
         gcode += f"""
         G90; switch back to absolute coordinates
-        G1 X{FINISHED_X} Y{FINISHED_Y} F30000;
+        G1 X{FINISHED_X} Y{FINISHED_Y} Z20 F30000;
         """
     # print(gcode)
     return gcode

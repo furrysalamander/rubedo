@@ -5,3 +5,6 @@ class PaResult:
         self.video_file = video_file
         self.height_data = height_data
         self.score = score
+
+    def __str__(self):
+        return f"{self.score}"

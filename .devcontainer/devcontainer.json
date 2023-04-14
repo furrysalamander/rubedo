@@ -1,13 +1,19 @@
 {
     "name": "rubedo",
     "build": {
-        "dockerfile":"Dockerfile",
+        "dockerfile": "Dockerfile",
         "args": {
             "USERNAME": "vscode",
             "BUILDKIT_INLINE_CACHE": "0"
-          }
+        }
     },
-    "runArgs": ["--device=/dev/video2"],
-    "extensions": ["ms-python.python", "076923.python-image-preview"]
-
+    "runArgs": [
+        "--device=/dev/video2"
+    ],
+    "customizations": {
+        "extensions": [
+            "ms-python.python",
+            "076923.python-image-preview"
+        ]
+    }
 }
