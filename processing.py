@@ -12,7 +12,7 @@ def crop_frame(frame):
 
 
 def preprocess_frame(frame):
-    lowerb = np.array([0, 0, 120])
+    lowerb = np.array([0, 0, 50])
     upperb = np.array([255, 255, 255])
     red_line = cv2.inRange(frame, lowerb, upperb)
 

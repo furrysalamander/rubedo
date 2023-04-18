@@ -35,7 +35,7 @@ ffmpeg_cmd = [
 def record_pattern(info: PatternInfo, buffer_distance: float, output_directory: str) -> list:
     send_gcode("STATUS_OFF") # Turn off LEDs
     send_gcode("LASER_ON") # Turn on line laser
-    send_gcode("SET_LED LED=chamber_lights WHITE=0.01")
+    send_gcode("SET_LED LED=chamber_lights WHITE=0")
     time.sleep(0.5)
 
     lines_start_y = info.lines_start_y()
@@ -57,7 +57,7 @@ def record_pattern(info: PatternInfo, buffer_distance: float, output_directory: 
 
         with subprocess.Popen(ffmpeg_cmd + [video_file]) as ffmpeg:
             time.sleep(0.5)
-            print(move_absolute(scan_end_x, f=600))
+            print(move_absolute(scan_end_x, f=400))
             wait_until_printer_at_location(scan_end_x)
 
             # stop recording

@@ -8,12 +8,17 @@
         }
     },
     "runArgs": [
-        "--device=/dev/video2"
+        // "--device=/dev/video2"
     ],
     "customizations": {
         "extensions": [
             "ms-python.python",
             "076923.python-image-preview"
-        ]
+		],
+		"vscode": {
+			"extensions": [
+				"ms-python.python"
+			]
+		}
     }
 }

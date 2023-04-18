@@ -45,8 +45,12 @@ def compute_x_value(pixel_values: np.ndarray):
 
 def generate_height_data_for_frame(frame: np.ndarray):
     frame = crop_frame(frame)
+    # cv2.imwrite(f"alignment_test/cropped.png", frame)
     frame = preprocess_frame(frame)
+    # cv2.imwrite(f"alignment_test/processed.png", frame)
     frame = apply_gaussian_blur(frame)
+    # cv2.imwrite(f"alignment_test/blurred.png", frame)
+    # exit()
 
     frame_height_data = np.ndarray(frame.shape[0])
 

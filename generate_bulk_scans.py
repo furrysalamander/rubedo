@@ -8,7 +8,7 @@ import pickle
 def main():
     patterns: list[PatternInfo] = []
     for x in range(20, 286, 31):
-        for y in range(20, 130, 45):
+        for y in range(80, 190, 45):
             patterns.append(
                 PatternInfo(
                     0, 0.06,
@@ -36,9 +36,8 @@ def main():
                 pattern
             ))
         )
-        break
 
-    with open("testing_adjustments.pkl", "wb") as f:
+    with open("matte_white_ambient_light.pkl", "wb") as f:
         pickle.dump(pa_scans, f)
 
     # results = generate_pa_results_for_pattern(calibration_pattern)
