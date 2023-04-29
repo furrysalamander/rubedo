@@ -1,19 +1,8 @@
 #!/usr/bin/python3
 from pattern_info import PatternInfo
-
-BUILD_PLATE_TEMPERATURE = 110
-HOTEND_TEMPERATURE = 255
-
-FINISHED_X = 30
-FINISHED_Y = 250
+from constants import *
 
 def generate_pa_tune_gcode(info: PatternInfo, finished_printing=True):
-    Z_HOP_HEIGHT = 0.75
-    LAYER_HEIGHT = 0.25
-    RETRACTION_DISTANCE = 0.5
-    EXTRUSION_DISTANCE_PER_MM = 0.045899
-    BOUNDING_BOX_LINE_WIDTH = 0.4 # May need adjustment. 
-
     def gcode_relative_extrude_move(x=None, y=None):
         # Does not support diagonal moves
         if x is not None:

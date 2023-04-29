@@ -1,17 +1,10 @@
 import json
 import websocket
 import random
-
-# HOST = 'fluiddpi.local'
-HOST = '192.168.1.113'
-WS_PORT = 7125
-GCODE_ENDPOINT = '/printer/gcode/script'
-OBJECTS_ENDPOINT = '/printer/objects/query'
+from ..constants import *
 
 # Helper function to automatically generate the coordinate strings
 # for G0 commands.
-
-
 def format_move(x: float = None, y: float = None, z: float = None, f: float = None):
     def format_string(value, prefix):
         return f" {prefix}{value}" if value is not None else ""

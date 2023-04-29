@@ -11,7 +11,7 @@ def brightest_average(pixel_values: np.ndarray):
 
 def weighted_average(pixel_values: np.ndarray):
     normalized_values = pixel_values / 255
-    adjusted_values = normalized_values ** 100
+    adjusted_values = normalized_values ** 10
     x_values = np.arange(adjusted_values.size)
     if adjusted_values.max() == 0:
         # FIXME: I need an appropriate solution for what to do if there are no non-zero values.

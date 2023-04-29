@@ -5,27 +5,15 @@ from pattern_info import PatternInfo
 from record import record_pattern
 from pa_result import PaResult
 from pa import *
+from constants import *
 
 import klipper.gcode as g
 
 import tempfile
 from pprint import pprint
 
-
-# This will print a calibrated + control pattern and measure the % improvement after tuning
-VALIDATE_RESULTS = True
-
-
-PRINT_START = f"""
-M104 S180; preheat nozzle while waiting for build plate to get to temp
-M140 S{BUILD_PLATE_TEMPERATURE};
-G28
-M190 S{BUILD_PLATE_TEMPERATURE};
-QUAD_GANTRY_LEVEL
-CLEAN_NOZZLE
-G28 Z
-M109 S{HOTEND_TEMPERATURE};
-"""
+PA_START_VALUE = 0
+PA_STOP_VALUE = 0.06
 
 def generate_pa_results_for_pattern(pattern_info: PatternInfo)-> list[PaResult]:
     results = []
@@ -43,18 +31,16 @@ def generate_pa_results_for_pattern(pattern_info: PatternInfo)-> list[PaResult]:
 
 def main():
     calibration_pattern = PatternInfo(
-        0, 0.06,
+        PA_START_VALUE, PA_STOP_VALUE,
         30, 30,
         10,
         30, 4
     )
 
-    
     g.send_gcode(PRINT_START)
-    g.send_gcode("CLEAN_NOZZLE")
     g.send_gcode(generate_pa_tune_gcode(calibration_pattern))
     g.wait_until_printer_at_location(FINISHED_X, FINISHED_Y)
-    g.send_gcode("M104 S0; let the hotend cool")
+    g.send_gcode(f"M104 S{HOTEND_IDLE_TEMP}; let the hotend cool")
 
     results = generate_pa_results_for_pattern(calibration_pattern)
         

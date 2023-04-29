@@ -4,15 +4,7 @@ import numpy as np
 import subprocess
 import time
 from pathlib import Path
-
-# TODO: Populate all of these.
-CAMERA_OFFSET_X = 28
-CAMERA_OFFSET_Y = 50.2
-
-CAMERA_FOV_X = 0
-CAMERA_FOV_Y = 0
-
-LASER_FOCUS_HEIGHT = 17.86
+from constants import *
 
 ffmpeg_cmd = [
     "ffmpeg",
@@ -20,13 +12,13 @@ ffmpeg_cmd = [
     "-f",
     "v4l2",
     "-framerate",
-    "30",
+    FRAMERATE,
     "-video_size",
-    "1280x720",
+    VIDEO_RESOLUTION,
     "-input_format",
     "mjpeg",
     "-i",
-    "/dev/video2",
+    VIDEO_DEVICE,
     ]
 
 
@@ -56,13 +48,13 @@ def record_pattern(info: PatternInfo, buffer_distance: float, output_directory: 
         video_files.append(video_file)
 
         with subprocess.Popen(ffmpeg_cmd + [video_file]) as ffmpeg:
-            time.sleep(0.5)
+            time.sleep(FFMPEG_START_DELAY)
             print(move_absolute(scan_end_x, f=400))
             wait_until_printer_at_location(scan_end_x)
 
             # stop recording
             ffmpeg.terminate()
-            time.sleep(0.6)
+            time.sleep(FFMPEG_STOP_DELAY)
 
     send_gcode("LASER_OFF")
     send_gcode("SET_LED LED=chamber_lights WHITE=1")

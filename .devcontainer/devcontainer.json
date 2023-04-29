@@ -7,9 +7,9 @@
             "BUILDKIT_INLINE_CACHE": "0"
         }
     },
-    "runArgs": [
-        // "--device=/dev/video2"
-    ],
+    // "runArgs": [
+    //     "--device=/dev/video2"
+    // ],
     "customizations": {
         "extensions": [
             "ms-python.python",
