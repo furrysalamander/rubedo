@@ -21,6 +21,9 @@ This tool is still very much experimental. I hope that someday it will grow to b
 * A line laser, preferably with an adjustable focus. I tested a fixed focus laser earlier on, but the beam was super thick and there was no way to adjust it. I have a laser like [this](https://www.amazon.com/module-Industrial-Module-adjustable-point-2packs/dp/B0BX6Q9FD8/). It's capable of focusing at a fairly close distance, though I had to put some hot glue on the lens to keep it from rotating over time since it's fairly loose at the distances I'm using it at.  Also, the outer edges of the line are poorly focused because they're further away than the center of the line, but it hasn't been a huge issue since it's just important that the very center of the beam is very thin.
 * `LASER_ON` and `LASER_OFF` macros. I have my laser connected to the SB2040 PCB on my toolhead. I used one of the 5v fan outputs, and it works fairly well.
 * Some sort of a mount for your USB camera and laser. I am using the mount `3DO_Mount_v2.step` located in the `camera_mounts` directory. If you do not use this exact mount, you will need to adjust the constants for the X and Y camera offset.  In addition, you will need to ensure that the laser is at a 45° angle from the camera. Ideally, both the camera and laser will be most in focus exactly where the laser passes through the center of the camera's field of view. This was not the case with my hardware, so I have shift the area my code analyzes to the side a bit. If your camera is rotated differently than mine, it should be fairly easy to add another parameter to rotate the video feed, but I have not implemented that yet so you will need to figure that out yourself. There might be a way to do that with the ffmpeg arguments used.
+* I *highly* recommend using a [Fabreeko P-Series Honey Badger build plate](https://www.fabreeko.com/collections/pei/products/honeybadger-p-series-smooth-black-pei-beds?variant=43432435056895). They have a matte black finish that pairs with the laser extremely well. I got the most consistent results when using one. If you can't get one, then either the textured Honey Badger build plate, or a regular smooth PEI sheet will work, just not nearly as well.  You can see how the laser shows up on each build surface in the image below.
+
+![laser on the different build surfaces](graphics/plates.jpg)
 
 Here's a closeup of the system attached to my printer.  I didn't have screws that were the right length, so I'm using some friction fit printed bushings and double sided tape to keep things together.
 
@@ -100,6 +103,10 @@ I am working on a formal research paper that goes more in depth about the way th
 If you think this project is cool, there are a bunch of us on the Alchemical3D discord server that are working on a printer that will use this system.  In addition, we are excited about the prospect of using it to calibrate other things, such as extrusion multiplier or even bed mesh. Feel free to check it out:
 
 [https://discord.gg/ByyEByP7hp](https://discord.gg/ByyEByP7hp)
+
+Thank you to [Fabreeko](https://www.fabreeko.com/) for providing two Honey Badger build plates for testing with the system! They helped tremendously, and resulted in significantly more consistent performance.
+
+Also, thank you to [3DO](https://3do.dk/) for providing a USB Nozzle Camera. The picture quality was significantly better than some of the other cameras I tested, and this project wouldn't have been possible without it.
 
 # Support This Project
 Like this project?  Feel free to make a donation.
