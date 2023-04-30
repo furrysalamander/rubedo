@@ -100,6 +100,10 @@ Here are some heightmaps from lines that I scanned while working on this project
 I am working on a formal research paper that goes more in depth about the way the system works, but in the meantime, I have a video on youtube that gives an overview of everything.
 
 # Additional Information
+Here's a youtube video I made with more information:
+
+[![Rubedo video overview](https://img.youtube.com/vi/c1hrP0gduRU/0.jpg)](https://www.youtube.com/watch?v=c1hrP0gduRU)
+
 If you think this project is cool, there are a bunch of us on the Alchemical3D discord server that are working on a printer that will use this system.  In addition, we are excited about the prospect of using it to calibrate other things, such as extrusion multiplier or even bed mesh. Feel free to check it out:
 
 [https://discord.gg/ByyEByP7hp](https://discord.gg/ByyEByP7hp)
