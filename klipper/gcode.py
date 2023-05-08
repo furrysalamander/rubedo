@@ -1,7 +1,7 @@
 import json
 import websocket
 import random
-from ..constants import *
+from constants import *
 
 # Helper function to automatically generate the coordinate strings
 # for G0 commands.

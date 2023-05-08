@@ -1,8 +1,6 @@
 # Connection details for communicating with the printer's moonraker API.
 HOST = '192.168.1.114'
 WS_PORT = 7125
-GCODE_ENDPOINT = '/printer/gcode/script'
-OBJECTS_ENDPOINT = '/printer/objects/query'
 
 # This will print a calibrated + control pattern and measure the % improvement after tuning
 VALIDATE_RESULTS = True
